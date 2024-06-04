@@ -232,9 +232,9 @@ def main(base_url, num_rows):
                 # Save checkpoint
                 if time.time() - last_checkpoint >= checkpoint_interval:
                     df = pd.DataFrame.from_dict(all_judgements)
-                    filename = f"../DATA/sc_judgement_data_year{i}_month_{j}_index_{k}.xlsx"
+                    filename = f"../DATA/sc_judgement_data_year_{i}_month_{j}_index_{k}.xlsx"
                     df.to_excel(filename)
-                    print("Saved checkpint at: {filename}")
+                    print(f"Saved checkpint at: {filename}")
                     last_checkpoint = time.time()
                     all_judgements=[]
 
