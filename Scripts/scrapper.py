@@ -6,6 +6,27 @@ from bs4 import BeautifulSoup
 
 import argparse
 
+# --------------- Checkpointing the scrapped data ------------------#
+PROGRESS_FILE = "scraping_progress.txt"
+
+def save_progress(year, month, start_index):
+    with open(PROGRESS_FILE, "w") as f:
+        f.write(f"{year},{month},{start_index}")
+
+
+def load_progress():
+    try:
+        with open(PROGRESS_FILE, "r") as f:
+            data = f.read().strip().split(",")
+            if len(data) == 3:
+                return int(data[0]), int(data[1]), int(data[2])
+            else:
+                return 0, 0, 0
+    except FileNotFoundError:
+        return 0, 0, 0
+
+# --------------------------------------------------------------------#
+
 
 id2month = {
   1: "January",
@@ -38,7 +59,7 @@ def get_year_links(base_url):
     return year_links
 
 
-def get_month_links(year_url):
+def get_month_links(year_url, base_url):
     """
     Get all month links from the given year URL.
     """
@@ -49,11 +70,11 @@ def get_month_links(year_url):
     for link in soup.find_all('a', href=True):
         href = link['href']
         if href.startswith('/search/?formInput=doctypes:supremecourt') and 'fromdate' in href:
-            month_links.append('https://indiankanoon.org' + href)
+            month_links.append(base_url + href)
     return month_links
 
 
-def get_judgement_links(month_url):
+def get_judgement_links(month_url, base_url):
     """
     Get all judgement links from the given month URL.
     """
@@ -81,7 +102,7 @@ def get_judgement_links(month_url):
         for link in links_on_page:
             href = link['href']
             if href.startswith('/doc/'):
-                judgement_link = 'https://indiankanoon.org' + href
+                judgement_link = base_url + href
                 judgement_links.append(judgement_link) 
     return judgement_links
 
@@ -155,31 +176,43 @@ def get_judgement_text(judgement_url):
         if precedent_elements:                                          
             precedent_text = "\n".join([element.get_text() for element in precedent_elements])
             judgement_details['Precedent'] = get_clean_text(precedent_text)
-
-
     return judgement_details
 
 
 def main(base_url, num_rows):
   
-    year_links = get_year_links(base_url)
-
+    year_links = get_year_links(base_url + "/browse/supremecourt/")
     all_judgements=[]
-
     counter = 0 
+
+    start_year, start_month, start_index = load_progress()
+    if start_year is not None:
+        print(f"Resuming from Year {start_year}, Month {start_month}, Index {start_index}")
+    else:
+        start_year, start_month, start_index = 0, 0, 0
+    
+    checkpoint_interval = 1*60       # Checkpoint every 5 minutes
+    last_checkpoint = time.time()
+
     
     for i, year_link in enumerate(year_links):
+        if i < start_year:
+            continue
         print(f"Year {i+1}/{len(year_links)}: {year_link}")
-        month_links = get_month_links(year_link)[1:]
+        month_links = get_month_links(year_link, base_url)[1:]
 
         
         for j, month_link in enumerate(month_links):
-            print(f"Month {j+1}/{len(month_links)}: {month_link}")
-            judgement_links = get_judgement_links(month_link)
+            if i == start_year and j < start_month:
+                continue
+            print(f"    Month {j+1}/{len(month_links)}: {month_link}")
+            judgement_links = get_judgement_links(month_link, base_url)
 
 
-            for k, judgement_link in enumerate(judgement_links):
-                print(f"Crawling {k+1}/{len(judgement_links)}: {judgement_link}")
+            for k, judgement_link in enumerate(judgement_links[start_index+1:]):
+                if i == start_year and j == start_month and k < start_index:
+                    continue
+                print(f"        Crawling {k+1}/{len(judgement_links)}: {judgement_link}")
                 judgement_details = get_judgement_text(judgement_link)
 
                 # Make a dict for each judgment
@@ -190,9 +223,20 @@ def main(base_url, num_rows):
                 judgement.update(judgement_details)
 
                 all_judgements.append(judgement)
-
                 counter +=1
                 time.sleep(1)
+
+                # Save progress
+                save_progress(i, j, k)
+
+                # Save checkpoint
+                if time.time() - last_checkpoint >= checkpoint_interval:
+                    df = pd.DataFrame.from_dict(all_judgements)
+                    filename = f"../DATA/sc_judgement_data_year{i}_month_{j}_index_{k}.xlsx"
+                    df.to_excel(filename)
+                    print("Saved checkpint at: {filename}")
+                    last_checkpoint = time.time()
+                    all_judgements=[]
 
                 if counter > num_rows:
                     break
@@ -204,11 +248,11 @@ def main(base_url, num_rows):
             print("[INFO] Reached maximum rows. Exiting.")
             break
         
-        
     
     df = pd.DataFrame.from_dict(all_judgements)
     print(df.head(10))
-    df.to_excel("sc_judgement_data.xlsx")
+    df.to_excel(f"../DATA/sc_judgement_data_year{i}_month_{j}_index_{k}.xlsx")
+
 
 
 if __name__ == "__main__":
