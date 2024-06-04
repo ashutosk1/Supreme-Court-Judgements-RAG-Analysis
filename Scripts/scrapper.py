@@ -122,7 +122,6 @@ def get_judgement_text(judgement_url):
     page = requests.get(print_view_url)
     soup = BeautifulSoup(page.content, 'html.parser')
     
-    # Find Issue element (can be multiple)
     div = soup.find('div', class_='judgments')
 
     if div:
