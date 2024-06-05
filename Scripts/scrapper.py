@@ -198,7 +198,7 @@ def main(base_url, num_rows):
     for i, year_link in enumerate(year_links):
         if i < start_year:
             continue
-        print(f"Year {i+1}/{len(year_links)}: {year_link}")
+        print(f"Year {i}/{len(year_links)}: {year_link}")
         month_links = get_month_links(year_link, base_url)[1:]
 
         
@@ -225,9 +225,7 @@ def main(base_url, num_rows):
                 all_judgements.append(judgement)
                 counter +=1
                 time.sleep(1)
-
-                # Save progress
-                save_progress(i, j, k)
+                
 
                 # Save checkpoint
                 if time.time() - last_checkpoint >= checkpoint_interval:
@@ -235,6 +233,7 @@ def main(base_url, num_rows):
                     filename = f"../DATA/sc_judgement_data_year_{i}_month_{j}_index_{k}.xlsx"
                     df.to_excel(filename)
                     print(f"Saved checkpint at: {filename}")
+                    save_progress(i, j, k)              # Save progress
                     last_checkpoint = time.time()
                     all_judgements=[]
 
@@ -252,6 +251,7 @@ def main(base_url, num_rows):
     df = pd.DataFrame.from_dict(all_judgements)
     print(df.head(10))
     df.to_excel(f"../DATA/sc_judgement_data_year{i}_month_{j}_index_{k}.xlsx")
+    save_progress(i, j, k)      # Save progress
 
 
 
