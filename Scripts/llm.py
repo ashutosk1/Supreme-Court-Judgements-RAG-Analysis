@@ -1,6 +1,5 @@
 import torch
-import requests
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.utils import is_flash_attn_2_available
 from transformers import BitsAndBytesConfig
 
@@ -10,7 +9,15 @@ import preprocess
 import numpy as np
 import faiss
 import textwrap
-import constants
+import json
+
+
+def load_constants(json_path='constants.json'):
+    with open(json_path, 'r') as file:
+        return json.load(file)
+
+# Load constants at the start
+constants = load_constants()
 
 
 def print_wrapped(text, wrap_length=80):
@@ -40,12 +47,14 @@ def get_similarity_search(query,
     index.add(embeddings)
     scores, indices = index.search(query_embedding, num_nearest_search)
 
-    context_items =  {}     # Make it a List of dict with scores 
-    for index in indices[0]:
+    context_items =  {
+                        "context": [],
+                        "score" : []
+                      }      
+    for index, score in zip(indices[0], scores[0]):
         context_items["context"].append(f"Category: {metadata.iloc[index]['category']}, Text: {metadata.iloc[index]['sentence_chunk']}")
-    # Add score to context item
-    for score in scores:
-        context_items["score"].append(score.cpu()) # return score back to CPU 
+        context_items["score"].append(score) # return score back to CPU 
+    print(context_items)
     return context_items
 
 
@@ -78,9 +87,13 @@ def get_llm_selection(constants):
         use_quantization_config = False
 
     # Update the settings on json file
-    constants["DEVICE"].update(device)
-    constants["LLM"]["use_quantization"].update(use_quantization_config)
-    constants["LLM"]["model_name"].update(model_id)
+    # Update the settings on json file
+    constants["DEVICE"] = device
+    constants["LLM"]["use_quantization"] = use_quantization_config
+    constants["LLM"]["model_name"] = model_id
+
+    with open("./constants.json", "w") as file:
+      json.dump(constants, file, indent=4)
 
     print(f"use_quantization_config set to: {use_quantization_config}")
     print(f"model_id set to: {model_id}")
@@ -133,6 +146,8 @@ def get_llm_model(model_name, use_quantization_config, device, set_flash_attenti
     get_model_mem_size(llm_model), print(llm_model)
     return tokenizer, llm_model
 
+
+
 def prompt_formatter(query, context_items):
     """
     Augments query with text-based context from context_items.
@@ -141,7 +156,7 @@ def prompt_formatter(query, context_items):
     # Create a base prompt with examples to help the model
     base_prompt = """Based on the following context items, please answer the query.
                     \nNow use the following context items to answer the user query:
-                    {context_items}
+                    {context}
                     \nRelevant passages: <extract relevant passages from the context here>
                     User query: {query}
                     Answer:"""
@@ -156,9 +171,9 @@ def ask_llm(query,
             model,
             temperature,
             max_new_tokens,
-            device,
-            format_answer_text=True, 
-            return_answer_only=True):
+            device, 
+            return_answer_only=True,
+            format_answer_text=True):
     """
     Asks the LLM model a question augmented with context retrieved from the metadata and returns the response.
     """
@@ -192,7 +207,6 @@ def ask_llm(query,
                             )
     # Turn the output tokens into text
     output_text = tokenizer.decode(outputs[0])
-
     if format_answer_text:
         # Replace special tokens and unnecessary help message
         output_text = output_text.replace(prompt, "").replace("<bos>", "").replace("<eos>", "").replace("Sure, here is the answer to the user query:\n\n", "")
@@ -201,6 +215,8 @@ def ask_llm(query,
         print(f"Answer:\n")
         print_wrapped(output_text)
     else:
-        print(f"Context items: {context_items}")
-
+        print(f"Answer:\n")
+        print_wrapped(output_text)
+        print(f"Context:\n")
+        print_wrapped(context_items)
     

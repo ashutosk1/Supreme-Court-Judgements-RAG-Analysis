@@ -20,7 +20,7 @@ def main(constants):
     # Get constants from the json file
     data_dir = constants["DATA_DIR"]
     saved_dir = constants["SAVED_DIR"]
-    constants["DEVICE"].update("gpu" if torch.cuda.is_available() else "cpu")
+    constants["DEVICE"] = "gpu" if torch.cuda.is_available() else "cpu"
     device = constants["DEVICE"]
 
     # Accessing PARAMS dictionary
@@ -39,6 +39,8 @@ def main(constants):
     max_new_tokens = constants["LLM"]["max_new_tokens"]
     temperature = constants["LLM"]["temperature"]
 
+    with open("./constants.json", "w") as file:
+      json.dump(constants, file, indent=4)
 
     query ="What are the precedents related to the issue of freedom of speech?"
     result = load_embeddings_and_metadata(saved_dir)
