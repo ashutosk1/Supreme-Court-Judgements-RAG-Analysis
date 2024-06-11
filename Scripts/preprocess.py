@@ -8,6 +8,7 @@ nlp.add_pipe("sentencizer")
 from sentence_transformers import SentenceTransformer
 import constants
 
+
 def get_data(data_dir):
     """
     Get all the sheets from the `data_dir`, merge them and read as a single DataFrame.
@@ -91,8 +92,7 @@ def save_embeddings_with_metadata(list_of_embeddings, df, save_dir):
     np.savez(embed_path, embeddings=embeddings)
 
     # Save Metadata
-    metadata = df.drop(columns="sentence_chunk")
-    metadata.to_csv(metadata_path, index=False)
+    df.to_csv(metadata_path, index=False)
     print(f"[INFO] Embeddings and Metadata saved at {embed_path} and {metadata_path} respectively.")
 
 
