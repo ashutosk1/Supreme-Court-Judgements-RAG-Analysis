@@ -1,21 +1,20 @@
 {
-    
     "DATA_DIR": "../DATA",
     "SAVED_DIR": "/content/drive/MyDrive/STORED_EMBED",
     "PARAMS": {
-        "num_examples": 200,
+        "num_examples": 10000,
         "num_sentences_per_chunk": 5,
         "min_token_len": 30,
         "batch_size": 32,
         "num_nearest_search": 5
     },
     "DEVICE": "cpu",
-    "EMBED_MODEL" : "all-mpnet-base-v2",
+    "EMBED_MODEL": "all-mpnet-base-v2",
     "LLM": {
         "model_name": "distilgpt2",
-        "use_quantization" : true,
-        "max_new_tokens" : 256,
-        "temperature" : 0.7,
-        "return_answer_only" : false
+        "use_quantization": true,
+        "max_new_tokens": 256,
+        "temperature": 0.7,
+        "return_answer_only": false
     }
 }
