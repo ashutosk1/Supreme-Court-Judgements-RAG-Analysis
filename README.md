@@ -25,20 +25,58 @@ user query:{context}\nRelevant passages: <extract relevant passages from the con
 """
 ```
 ***
-*Generation*
+*Generation*:
 
 Generate coherent and contextually relevant responses based on the augmented information.
 
 We select models based on the system configs which can be accessed through `constants.json` file. The choice of model is `google/gemma-2b-it` or `google/gemma-7b-it` (https://huggingface.co/google/gemma-7b-it).
 
 
-
-
-
-
-
-
-
-
-
 ## Set-up
+
+Clone the Repository:
+
+```
+git clone https://github.com/ashutosk1/Supreme-Court-Judgements-RAG-Analysis.git
+```
+
+Install Requirements:
+
+```
+pip install -r requirements.txt
+```
+
+Modify the settings as per choice:
+
+`./Scripts/constants.json`
+
+
+Run the pipeline:
+
+```
+python3 main.py -query "Enter query for the pipeline"
+```
+
+The pipeline is device-agnostic but it is preferable to run it on GPU where the inference is must faster ~50 seconds (Google Colab's T4 GPU) compared to ~12-15 minutes on CPU. 
+
+
+
+
+
+
+
+
+
+
+
+## Demo
+
+https://github.com/ashutosk1/Supreme-Court-Judgements-RAG-Analysis/blob/main/RAG_colab_setup.ipynb
+
+Note: The model `google/gemma-7b-it` and `google/gemma-2b-it` is a gated model and therefore, requires to sign-up to the huggingface library and request for grant of permission. 
+
+Get user access tokens on Huggingface: https://huggingface.co/settings/tokens and authenticate via `huggingface-cli login` on CLI to download the pre-trained models. 
+
+The pipeline currently utilizes ~2000 Judgements which can be extended to ~60k Judgements between (1950-2023) by the Supreme Court of India for better context retreival.  
+     
+
