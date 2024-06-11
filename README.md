@@ -47,13 +47,15 @@ pip install -r requirements.txt
 ```
 
 Modify the settings as per choice:
-
-`./Scripts/constants.json`
+```
+./Scripts/constants.json
+```
 
 
 Run the pipeline:
 
 ```
+cd Scripts
 python3 main.py -query "Enter query for the pipeline"
 ```
 
