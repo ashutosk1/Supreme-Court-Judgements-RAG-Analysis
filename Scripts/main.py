@@ -2,7 +2,7 @@ from preprocess import load_embeddings_and_metadata, load_preprocess_and_embed
 from llm import get_llm_selection, get_llm_model, ask_llm
 import torch
 import json
-
+import argparse
 
 def load_json_config(file_path):
     """
@@ -16,7 +16,7 @@ def load_json_config(file_path):
     return config
 
 
-def main(constants):
+def main(query, constants):
     # Get constants from the json file
     data_dir = constants["DATA_DIR"]
     saved_dir = constants["SAVED_DIR"]
@@ -39,6 +39,7 @@ def main(constants):
     max_new_tokens = constants["LLM"]["max_new_tokens"]
     temperature = constants["LLM"]["temperature"]
 
+    # Dump any modified config
     with open("./constants.json", "w") as file:
       json.dump(constants, file, indent=4)
 
@@ -76,6 +77,10 @@ def main(constants):
 
 
 if __name__ =="__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("query", type=str, help="Enter your query for the RAG Pipeline.")
+    args = parser.parse_args()
+    query = args.query
     constants = load_json_config("./constants.json")
-    main(constants)
+    main(query, constants)
 

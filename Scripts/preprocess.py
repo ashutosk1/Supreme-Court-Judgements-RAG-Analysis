@@ -7,6 +7,7 @@ nlp = English()
 nlp.add_pipe("sentencizer")
 from sentence_transformers import SentenceTransformer
 
+import tqdm
 
 def get_data(data_dir):
     """
@@ -14,14 +15,21 @@ def get_data(data_dir):
     """
     all_data_files = glob.glob(data_dir+"/*.xlsx")
     print(f"[INFO] {len(all_data_files)} data sheets detected.")
-    merged_df = []
+    merged_df_list = []
 
     for data_file in all_data_files:
         df = pd.read_excel(data_file)
-        merged_df.append(df)
+        merged_df_list.append(df)
     
-    merged_df = pd.concat(merged_df, ignore_index=True)
-    print(f"[INFO] Total {(merged_df.shape[0])} rows merged.")
+    if len(merged_df_list) > 1:
+        merged_df = pd.concat(merged_df_list, ignore_index=True)
+        print(f"[INFO] Total {(merged_df.shape[0])} rows merged.")
+
+    elif len(merged_df_list) == 1:
+        merged_df = merged_df_list[0]
+
+    else:
+        raise ValueError(f"[ERROR] Empty Dataframe.")
     return merged_df
 
 
@@ -44,7 +52,7 @@ def make_sentence_chunks(list_of_sentences, num_senetences_per_chunk):
 
 def expand_chunks_to_rows(df, text_columns):
     expanded_rows = []
-    for idx, row in df.iterrows():
+    for idx, row in tqdm.tqdm(df.iterrows()):
         for col in text_columns:
             chunks = row[f"{col}_Chunks"]
             joined_chunks_as_sentences = [[" ".join(chunk)] for chunk in chunks]
@@ -87,7 +95,7 @@ def save_embeddings_with_metadata(list_of_embeddings, df, save_dir):
     assert (list_of_embeddings.shape[0]) == df.shape[0]  # Number of embeddings are same as number of sentence_chunks
 
     # Save Embeddings
-    embeddings = np.array(list_of_embeddings)
+    embeddings = np.array(list_of_embeddings.to("cpu"))
     np.savez(embed_path, embeddings=embeddings)
 
     # Save Metadata

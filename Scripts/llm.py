@@ -19,7 +19,6 @@ def load_constants(json_path='constants.json'):
 # Load constants at the start
 constants = load_constants()
 
-
 def print_wrapped(text, wrap_length=80):
     wrapped_text = textwrap.fill(text, wrap_length)
     print(wrapped_text)
@@ -52,9 +51,12 @@ def get_similarity_search(query,
                         "score" : []
                       }      
     for index, score in zip(indices[0], scores[0]):
-        context_items["context"].append(f"Category: {metadata.iloc[index]['category']}, Text: {metadata.iloc[index]['sentence_chunk']}")
-        context_items["score"].append(score) # return score back to CPU 
-    print(context_items)
+        text = f"Title: {metadata.iloc[index]['title']}\n Category: {metadata.iloc[index]['category']}\n Text: {metadata.iloc[index]['sentence_chunk']}\n"
+        print_wrapped(text)
+        print(200*"*")
+        context_items["context"].append(text)
+        context_items["score"].append(score)
+
     return context_items
 
 
@@ -63,8 +65,8 @@ def get_llm_selection(constants):
     """
     Selects an appropriate LLM model based on the available GPU memory.
     """
-    device = "gpu" if torch.cuda.is_available() else "cpu"
-    if device == "gpu":
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
         gpu_memory_bytes = torch.cuda.get_device_properties(0).total_memory
         gpu_memory_gb = round(gpu_memory_bytes / (2**30))
         print(f"[INFO] Available GPU memory: {gpu_memory_gb} GB")
@@ -154,8 +156,7 @@ def prompt_formatter(query, context_items):
     """
 
     # Create a base prompt with examples to help the model
-    base_prompt = """Based on the following context items, please answer the query.
-                    \nNow use the following context items to answer the user query:
+    base_prompt = """Use the following context items to answer the user query:
                     {context}
                     \nRelevant passages: <extract relevant passages from the context here>
                     User query: {query}
@@ -172,7 +173,7 @@ def ask_llm(query,
             temperature,
             max_new_tokens,
             device, 
-            return_answer_only=True,
+            return_answer_only=False,
             format_answer_text=True):
     """
     Asks the LLM model a question augmented with context retrieved from the metadata and returns the response.
