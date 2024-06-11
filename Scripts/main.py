@@ -20,7 +20,7 @@ def main(constants):
     # Get constants from the json file
     data_dir = constants["DATA_DIR"]
     saved_dir = constants["SAVED_DIR"]
-    constants["DEVICE"] = "gpu" if torch.cuda.is_available() else "cpu"
+    constants["DEVICE"] = "cuda" if torch.cuda.is_available() else "cpu"
     device = constants["DEVICE"]
 
     # Accessing PARAMS dictionary
