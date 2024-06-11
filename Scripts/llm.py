@@ -39,7 +39,14 @@ def get_similarity_search(query,
     index = faiss.IndexFlatL2(embed_dimension)
     index.add(embeddings)
     scores, indices = index.search(query_embedding, num_nearest_search)
-    return scores[0], indices[0]
+
+    context_items =  {}     # Make it a List of dict with scores 
+    for index in indices[0]:
+        context_items["context"].append(f"Category: {metadata.iloc[index]['category']}, Text: {metadata.iloc[index]['sentence_chunk']}")
+    # Add score to context item
+    for score in scores:
+        context_items["score"].append(score.cpu()) # return score back to CPU 
+    return context_items
 
 
 
@@ -133,19 +140,6 @@ def prompt_formatter(query, context_items):
 
     # Create a base prompt with examples to help the model
     base_prompt = """Based on the following context items, please answer the query.
-                    Give yourself room to think by extracting relevant passages from the context before answering the query.
-                    Don't return the thinking, only return the answer.
-                    Make sure your answers are as explanatory as possible.
-                    Use the following examples as reference for the ideal answer style.
-                    \nExample 1:
-                    Query: What are the fat-soluble vitamins?
-                    Answer: The fat-soluble vitamins include Vitamin A, Vitamin D, Vitamin E, and Vitamin K. These vitamins are absorbed along with fats in the diet and can be stored in the body's fatty tissue and liver for later use. Vitamin A is important for vision, immune function, and skin health. Vitamin D plays a critical role in calcium absorption and bone health. Vitamin E acts as an antioxidant, protecting cells from damage. Vitamin K is essential for blood clotting and bone metabolism.
-                    \nExample 2:
-                    Query: What are the causes of type 2 diabetes?
-                    Answer: Type 2 diabetes is often associated with overnutrition, particularly the overconsumption of calories leading to obesity. Factors include a diet high in refined sugars and saturated fats, which can lead to insulin resistance, a condition where the body's cells do not respond effectively to insulin. Over time, the pancreas cannot produce enough insulin to manage blood sugar levels, resulting in type 2 diabetes. Additionally, excessive caloric intake without sufficient physical activity exacerbates the risk by promoting weight gain and fat accumulation, particularly around the abdomen, further contributing to insulin resistance.
-                    \nExample 3:
-                    Query: What is the importance of hydration for physical performance?
-                    Answer: Hydration is crucial for physical performance because water plays key roles in maintaining blood volume, regulating body temperature, and ensuring the transport of nutrients and oxygen to cells. Adequate hydration is essential for optimal muscle function, endurance, and recovery. Dehydration can lead to decreased performance, fatigue, and increased risk of heat-related illnesses, such as heat stroke. Drinking sufficient water before, during, and after exercise helps ensure peak physical performance and recovery.
                     \nNow use the following context items to answer the user query:
                     {context_items}
                     \nRelevant passages: <extract relevant passages from the context here>
@@ -156,28 +150,20 @@ def prompt_formatter(query, context_items):
     base_prompt = base_prompt.format(context=context_items, query=query)
     return base_prompt
 
-    
 
 def ask_llm(query,
-            metadata,
             tokenizer,
             model,
-            temperature=constants["LLM"]["temperature"],
-            max_new_tokens=constants["LLM"]["max_new_tokens"],
+            temperature,
+            max_new_tokens,
+            device,
             format_answer_text=True, 
-            return_answer_only=True,
-            device = constants["DEVICE"]):
+            return_answer_only=True):
     """
     Asks the LLM model a question augmented with context retrieved from the metadata and returns the response.
     """
-    scores, indices = get_similarity_search(query=query)
-    context_items =  {}     # Make it a List of dict with scores 
-    for index in indices[0]:
-        context_items["context"].append(f"Category: {metadata.iloc[index]['category']}, Text: {metadata.iloc[index]['sentence_chunk']}")
+    context_items = get_similarity_search(query=query)
     
-    # Add score to context item
-    for score in scores:
-        context_items["score"].append(score.cpu()) # return score back to CPU 
 
     # Format the prompt with context items
     base_prompt = prompt_formatter(query=query,

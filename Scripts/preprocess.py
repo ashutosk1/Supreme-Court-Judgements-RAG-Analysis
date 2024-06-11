@@ -6,7 +6,6 @@ from spacy.lang.en import English
 nlp = English()
 nlp.add_pipe("sentencizer")
 from sentence_transformers import SentenceTransformer
-import constants
 
 
 def get_data(data_dir):
@@ -122,23 +121,30 @@ def load_embeddings_and_metadata(save_dir):
     return embeddings, metadata
 
 
-def load_preprocess_and_embed():
+def load_preprocess_and_embed(data_dir,
+                              saved_dir,
+                              num_examples,
+                              embed_model,
+                              batch_size,
+                              min_token_length,
+                              num_sentences_per_chunk,
+                              device
+                            ):
     """
     Loads data, preprocesses text, generates embeddings, and saves them.
 
     """
-    df = get_data(constants.DATA_DIR)[:constants.NUM_EXAMPLES]
+    df = get_data(data_dir)[:num_examples]
     # Split text into sentences and then into chunks
     text_columns = ["Issue", "Facts", "Precedent"]
     for col in text_columns:
         df[f"{col}_Sentences"] = df[col].astype(str).apply(text_to_sentences)
         df[f"{col}_Chunks"] = df[f"{col}_Sentences"].apply(lambda x: \
-                                                           make_sentence_chunks(x, 
-                                                                                        constants.NUM_SENTENCES_PER_CHUNK))
+                                                           make_sentence_chunks(x, num_sentences_per_chunk))
         
     # Expand chunks into separate rows with `category`, `id` and `title` as identifier.
     combined_df = expand_chunks_to_rows(df, text_columns)
-    combined_df = combined_df[combined_df["chunk_token_count"] > constants.MIN_TOKEN_LEN]       # Filter chuks with little to no information
+    combined_df = combined_df[combined_df["chunk_token_count"] > min_token_length]       # Filter chuks with little to no information
 
 
     # Embed the sentences using pre-trained Embedding Model
@@ -146,13 +152,11 @@ def load_preprocess_and_embed():
     
     all_sentence_chunks = combined_df["sentence_chunk"].tolist()
     print(f"[INFO] Total {len(all_sentence_chunks)} sentence chunks to be tokenized.")
-    all_sentence_chunks_embeddings = get_embeddings(all_sentence_chunks, constants.MODEL_NAME, 
-                                                               constants.BATCH_SIZE, 
-                                                               constants.DEVICE)
+    all_sentence_chunks_embeddings = get_embeddings(all_sentence_chunks, embed_model, batch_size, device)
     print(f"[INFO] Number of chunks: {all_sentence_chunks_embeddings.shape[0]}, Shape of Embeddings:{all_sentence_chunks_embeddings.shape[1]}")
     
     # Store the embeddings
-    save_embeddings_with_metadata(all_sentence_chunks_embeddings, combined_df, constants.SAVED_DIR)
+    save_embeddings_with_metadata(all_sentence_chunks_embeddings, combined_df, saved_dir)
 
 
 
