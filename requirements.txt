@@ -4,7 +4,7 @@ faiss_cpu==1.8.0
 numpy==1.26.4
 pandas==2.2.2
 Requests==2.32.3
-sentence_transformers==3.0.0
+sentence_transformers
 spacy==3.7.4
 torch==2.1.0
 transformers==4.41.2
